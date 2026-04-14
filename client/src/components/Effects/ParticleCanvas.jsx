@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-const COLORS = ["#386641", "#6a994e", "#a7c957", "#dde5b6", "#f2e8cf", "#bc4749"];
+const COLORS = ["#386641", "#6a994e", "#a7c957", "#dde5b6", "#bc4749"];
 
 function ParticleCanvas({ style = {}, mini = false }) {
     const canvasRef = useRef(null);
@@ -20,33 +20,44 @@ function ParticleCanvas({ style = {}, mini = false }) {
             reset(rand) {
                 this.x = Math.random() * this.W;
                 this.y = rand ? Math.random() * this.H : this.H + 10;
-                this.size = Math.random() * (mini ? 2 : 2.5) + 0.5;
+                this.size = Math.random() * (mini ? 3 : 3.5) + 0.8;
                 this.baseX = this.x; this.baseY = this.y;
-                this.vx = (Math.random() - 0.5) * 0.4;
-                this.vy = -(Math.random() * 0.4 + 0.1);
+                this.vx = (Math.random() - 0.5) * 0.35;
+                this.vy = -(Math.random() * 0.3 + 0.08);
                 this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
-                this.alpha = Math.random() * 0.7 + 0.2;
+                this.alpha = Math.random() * 0.5 + 0.15;
+                this.pulseSpeed = Math.random() * 0.02 + 0.01;
+                this.pulsePhase = Math.random() * Math.PI * 2;
+                this.time = 0;
             }
             update(mx, my) {
+                this.time += this.pulseSpeed;
                 const dx = this.x - mx, dy = this.y - my;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                const force = mini ? 80 : 120;
+                const force = mini ? 90 : 140;
                 if (dist < force) {
                     const ang = Math.atan2(dy, dx);
                     const push = (force - dist) / force;
-                    this.x += Math.cos(ang) * push * (mini ? 5 : 5);
-                    this.y += Math.sin(ang) * push * (mini ? 5 : 5);
+                    this.x += Math.cos(ang) * push * 6;
+                    this.y += Math.sin(ang) * push * 6;
                 } else {
-                    this.x += (this.baseX - this.x) * 0.05 + this.vx;
-                    this.y += (this.baseY - this.y) * 0.05 + this.vy;
-                    this.baseX += this.vx * 0.5;
-                    this.baseY += this.vy * 0.5;
+                    this.x += (this.baseX - this.x) * 0.04 + this.vx;
+                    this.y += (this.baseY - this.y) * 0.04 + this.vy;
+                    this.baseX += this.vx * 0.4;
+                    this.baseY += this.vy * 0.4;
                 }
                 if (this.baseY < -10) this.reset(false);
             }
             draw(ctx) {
                 ctx.save();
-                ctx.globalAlpha = this.alpha;
+                // gentle pulsing alpha
+                const pulse = Math.sin(this.time + this.pulsePhase) * 0.15;
+                ctx.globalAlpha = Math.max(0.05, this.alpha + pulse);
+                
+                // soft glow
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = mini ? 6 : 10;
+                
                 ctx.fillStyle = this.color;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
@@ -64,13 +75,13 @@ function ParticleCanvas({ style = {}, mini = false }) {
         function initParticles() {
             const W = cv.width, H = cv.height;
             const count = mini
-                ? Math.min(120, Math.floor(W * H / 3000))
-                : Math.min(300, Math.floor(W * H / 4000));
+                ? Math.min(100, Math.floor(W * H / 3500))
+                : Math.min(250, Math.floor(W * H / 5000));
             state.particles = Array.from({ length: count }, () => new Particle(W, H, true));
         }
 
         function drawConnections() {
-            const threshold = mini ? 55 : 90;
+            const threshold = mini ? 65 : 100;
             ctx.save();
             for (let i = 0; i < state.particles.length; i++) {
                 for (let j = i + 1; j < state.particles.length; j++) {
@@ -78,9 +89,17 @@ function ParticleCanvas({ style = {}, mini = false }) {
                     const dy = state.particles[i].y - state.particles[j].y;
                     const d = Math.sqrt(dx * dx + dy * dy);
                     if (d < threshold) {
-                        ctx.globalAlpha = (1 - d / threshold) * (mini ? 0.2 : 0.12);
-                        ctx.strokeStyle = "#6a994e";
-                        ctx.lineWidth = 0.5;
+                        const opacity = (1 - d / threshold) * (mini ? 0.18 : 0.1);
+                        ctx.globalAlpha = opacity;
+                        // gradient line between connected particles
+                        const grad = ctx.createLinearGradient(
+                            state.particles[i].x, state.particles[i].y,
+                            state.particles[j].x, state.particles[j].y
+                        );
+                        grad.addColorStop(0, state.particles[i].color);
+                        grad.addColorStop(1, state.particles[j].color);
+                        ctx.strokeStyle = grad;
+                        ctx.lineWidth = 0.8;
                         ctx.beginPath();
                         ctx.moveTo(state.particles[i].x, state.particles[i].y);
                         ctx.lineTo(state.particles[j].x, state.particles[j].y);
@@ -95,7 +114,12 @@ function ParticleCanvas({ style = {}, mini = false }) {
             ctx.clearRect(0, 0, cv.width, cv.height);
             if (mini) {
                 ctx.save();
-                ctx.fillStyle = "#f2e8cf";
+                // soft gradient bg for mini canvas
+                const bg = ctx.createLinearGradient(0, 0, cv.width, cv.height);
+                bg.addColorStop(0, "#f2e8cf");
+                bg.addColorStop(0.5, "#eae0c2");
+                bg.addColorStop(1, "#f2e8cf");
+                ctx.fillStyle = bg;
                 ctx.fillRect(0, 0, cv.width, cv.height);
                 ctx.restore();
             }
@@ -118,11 +142,16 @@ function ParticleCanvas({ style = {}, mini = false }) {
             if (mini) return;
             const r = cv.getBoundingClientRect();
             const mx = e.clientX - r.left, my = e.clientY - r.top;
-            for (let i = 0; i < 18; i++) {
+            // burst effect on click
+            for (let i = 0; i < 24; i++) {
                 const p = new Particle(cv.width, cv.height, true);
                 p.x = p.baseX = mx; p.y = p.baseY = my;
-                p.vx = (Math.random() - 0.5) * 3;
-                p.vy = (Math.random() - 0.5) * 3;
+                const angle = (Math.PI * 2 * i) / 24;
+                const speed = Math.random() * 3 + 1.5;
+                p.vx = Math.cos(angle) * speed;
+                p.vy = Math.sin(angle) * speed;
+                p.size = Math.random() * 3 + 1;
+                p.alpha = 0.8;
                 state.particles.push(p);
             }
         }
@@ -149,13 +178,13 @@ function ParticleCanvas({ style = {}, mini = false }) {
             ref={canvasRef}
             id={mini ? "mini-canvas" : "particle-canvas"}
             style={{
-                position: mini ? "absolute" : "absolute",
+                position: "absolute",
                 inset: 0,
                 width: "100%",
                 height: "100%",
                 display: "block",
                 cursor: mini ? "crosshair" : "none",
-                zIndex: mini ? 0 : 0,
+                zIndex: 0,
                 ...style,
             }}
         />
