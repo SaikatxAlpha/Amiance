@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../components/Layout/Navbar";
+import TShirtCanvas from "../components/Effects/TShirtCanvas";
 
 /* ─── Static data ─────────────────────────────────────────────── */
 const MARQUEE_ITEMS = [
@@ -38,86 +39,9 @@ const PRODUCTS = [
     { tag: "Drop 05", name: "Relaxed Linen Shirt", price: "₹2,199", hue: "115,33%,12%", accent: "86,44%,52%" },
 ];
 
-/* ─── Orb noise helper ─────────────────────────────────────────── */
-function noiseFn(x, y, z) {
-    return (
-        Math.sin(x * 1.7 + z) * 0.30 +
-        Math.sin(y * 1.3 + z * 0.8) * 0.25 +
-        Math.sin((x + y) * 0.9 + z * 1.2) * 0.20 +
-        Math.sin(x * 2.4 - y * 1.8 + z * 0.6) * 0.15 +
-        Math.sin(y * 2.1 + z * 1.4) * 0.10
-    );
-}
-
-function drawOrbFrame(ctx, canvas, t) {
-    const W = canvas.width, H = canvas.height;
-    ctx.clearRect(0, 0, W, H);
-    const cx = W / 2, cy = H / 2;
-    const baseR = Math.min(W, H) * 0.28;
-    const pts = 180, layers = 4;
-
-    const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, baseR * 1.4);
-    grd.addColorStop(0, "rgba(56,102,65,0.15)");
-    grd.addColorStop(0.5, "rgba(106,153,78,0.05)");
-    grd.addColorStop(1, "transparent");
-    ctx.fillStyle = grd;
-    ctx.fillRect(0, 0, W, H);
-
-    for (let l = layers; l >= 1; l--) {
-        const layerT = t + l * 0.5;
-        const alpha = l === layers ? 0.7 : 0.15 + l * 0.07;
-        const rScale = 0.85 + l * 0.05;
-        const deform = 0.12 + l * 0.04;
-        ctx.beginPath();
-        for (let i = 0; i <= pts; i++) {
-            const angle = (i / pts) * Math.PI * 2;
-            const n = noiseFn(Math.cos(angle) * 1.5, Math.sin(angle) * 1.5, layerT);
-            const r = baseR * rScale * (1 + deform * n);
-            i === 0
-                ? ctx.moveTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r)
-                : ctx.lineTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r);
-        }
-        ctx.closePath();
-        if (l === layers) {
-            const fg = ctx.createRadialGradient(cx - baseR * 0.2, cy - baseR * 0.2, 0, cx, cy, baseR * 1.2);
-            fg.addColorStop(0, `rgba(167,201,87,${alpha})`);
-            fg.addColorStop(0.4, `rgba(106,153,78,${alpha * 0.7})`);
-            fg.addColorStop(0.7, `rgba(56,102,65,${alpha * 0.4})`);
-            fg.addColorStop(1, `rgba(20,30,20,${alpha * 0.1})`);
-            ctx.fillStyle = fg; ctx.fill();
-            ctx.strokeStyle = "rgba(167,201,87,0.3)"; ctx.lineWidth = 0.5; ctx.stroke();
-        } else {
-            ctx.strokeStyle = `rgba(167,201,87,${alpha})`; ctx.lineWidth = 0.5; ctx.stroke();
-        }
-    }
-
-    const ig = ctx.createRadialGradient(cx - baseR * 0.25, cy - baseR * 0.3, 0, cx, cy, baseR * 0.8);
-    ig.addColorStop(0, "rgba(242,232,207,0.18)"); ig.addColorStop(0.5, "rgba(167,201,87,0.06)"); ig.addColorStop(1, "transparent");
-    ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(cx, cy, baseR, 0, Math.PI * 2); ctx.fill();
-
-    for (let p = 0; p < 8; p++) {
-        const pa = (p / 8) * Math.PI * 2 + t * (0.3 + p * 0.04);
-        const pr = baseR * (1.1 + 0.15 * Math.sin(t * 2 + p));
-        ctx.beginPath();
-        ctx.arc(cx + Math.cos(pa) * pr, cy + Math.sin(pa) * pr, 1.5 + Math.sin(t * 3 + p) * 0.8, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(167,201,87,${0.3 + 0.3 * Math.sin(t * 2 + p)})`; ctx.fill();
-    }
-
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(t * 0.05);
-    for (let g = 0; g < 6; g++) {
-        const ga = (g / 6) * Math.PI;
-        ctx.beginPath();
-        ctx.moveTo(Math.cos(ga) * baseR * 1.3, Math.sin(ga) * baseR * 1.3);
-        ctx.lineTo(-Math.cos(ga) * baseR * 1.3, -Math.sin(ga) * baseR * 1.3);
-        ctx.strokeStyle = "rgba(106,153,78,0.06)"; ctx.lineWidth = 0.5; ctx.stroke();
-    }
-    ctx.restore();
-}
-
-/* ─── Cart helpers (localStorage) ─────────────────────────────── */
+/* ─── Cart helpers ─────────────────────────────────────────────── */
 const getCart = () => JSON.parse(localStorage.getItem("urbn_cart") || "[]");
 const saveCart = (c) => localStorage.setItem("urbn_cart", JSON.stringify(c));
-
 function addToCart(name, price, setBadge) {
     const cart = getCart();
     const ex = cart.find(i => i.name === name);
@@ -128,49 +52,22 @@ function addToCart(name, price, setBadge) {
 
 /* ─── Component ────────────────────────────────────────────────── */
 function Home() {
-    const canvasRef = useRef(null);
-    const rafRef = useRef(null);
-    const tRef = useRef(0);
+    /* t-shirt animation gate */
+    const [shirtDone, setShirtDone] = useState(false);
 
-    /* Orb animation */
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext("2d");
-        const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
-        resize();
-        window.addEventListener("resize", resize);
-        const tick = () => {
-            tRef.current += 0.008;
-            drawOrbFrame(ctx, canvas, tRef.current);
-            rafRef.current = requestAnimationFrame(tick);
-        };
-        rafRef.current = requestAnimationFrame(tick);
-        return () => { cancelAnimationFrame(rafRef.current); window.removeEventListener("resize", resize); };
-    }, []);
-
-    /* Orb parallax */
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const onMove = (e) => {
-            canvas.style.transform = `translate(${(e.clientX / window.innerWidth - 0.5) * 20}px,${(e.clientY / window.innerHeight - 0.5) * 20}px)`;
-        };
-        document.addEventListener("mousemove", onMove);
-        return () => document.removeEventListener("mousemove", onMove);
-    }, []);
-
-    /* Scroll reveal */
+    /* ── Scroll reveal ─────────────────────────────────────── */
     useEffect(() => {
         const obs = new IntersectionObserver(
-            entries => entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add("visible"); obs.unobserve(e.target); } }),
+            entries => entries.forEach(e => {
+                if (e.isIntersecting) { e.target.classList.add("visible"); obs.unobserve(e.target); }
+            }),
             { threshold: 0.15 }
         );
         document.querySelectorAll(".reveal").forEach(el => obs.observe(el));
         return () => obs.disconnect();
     }, []);
 
-    /* Stat counters */
+    /* ── Stat counters ─────────────────────────────────────── */
     useEffect(() => {
         const animCount = (el, target) => {
             const dur = 1800, start = performance.now();
@@ -194,7 +91,7 @@ function Home() {
         return () => obs.disconnect();
     }, []);
 
-    /* Magnetic buttons */
+    /* ── Magnetic buttons ──────────────────────────────────── */
     useEffect(() => {
         const btns = document.querySelectorAll(".btn-primary, .cta-btn, .nav-cta");
         const handlers = [];
@@ -205,7 +102,10 @@ function Home() {
             btn.addEventListener("mouseleave", onLeave);
             handlers.push({ btn, onMove, onLeave });
         });
-        return () => handlers.forEach(({ btn, onMove, onLeave }) => { btn.removeEventListener("mousemove", onMove); btn.removeEventListener("mouseleave", onLeave); });
+        return () => handlers.forEach(({ btn, onMove, onLeave }) => {
+            btn.removeEventListener("mousemove", onMove);
+            btn.removeEventListener("mouseleave", onLeave);
+        });
     }, []);
 
     const marqueeAll = [...MARQUEE_ITEMS, ...MARQUEE_ITEMS, ...MARQUEE_ITEMS, ...MARQUEE_ITEMS];
@@ -234,13 +134,57 @@ function Home() {
                         <em>intention.</em> Minimal by design. Bold by nature.
                     </p>
                     <div className="hero-actions">
-                        <Link to="/shop"><button className="btn-primary"><span>Shop Collection</span></button></Link>
-                        <Link to="/shop"><button className="btn-ghost">View Lookbook<span className="arrow" /></button></Link>
+                        <Link to="/shop">
+                            <button className="btn-primary"><span>Shop Collection</span></button>
+                        </Link>
+                        <Link to="/shop">
+                            <button className="btn-ghost">View Lookbook<span className="arrow" /></button>
+                        </Link>
                     </div>
                 </div>
 
+                {/* ── T-SHIRT ANIMATION ── */}
                 <div className="hero-right">
-                    <canvas ref={canvasRef} id="orb-canvas" />
+                    <TShirtCanvas onComplete={() => setShirtDone(true)} />
+
+                    {/* "scroll complete" pulse badge — appears when done */}
+                    <div
+                        className="shirt-done-badge"
+                        style={{
+                            position: "absolute",
+                            bottom: "40px",
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            opacity: shirtDone ? 1 : 0,
+                            transition: "opacity 0.6s ease 0.3s",
+                            pointerEvents: "none",
+                            zIndex: 2,
+                        }}
+                    >
+                        <span style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            fontSize: "9px",
+                            fontWeight: 700,
+                            letterSpacing: "0.22em",
+                            textTransform: "uppercase",
+                            color: "rgba(167,201,87,0.7)",
+                            fontFamily: "'Space Grotesk', sans-serif",
+                        }}>
+                            <span style={{
+                                display: "inline-block",
+                                width: "6px",
+                                height: "6px",
+                                borderRadius: "50%",
+                                background: "#a7c957",
+                                boxShadow: "0 0 8px rgba(167,201,87,0.8)",
+                                animation: shirtDone ? "scrollPulse 1.5s ease-in-out infinite" : "none",
+                            }} />
+                            Scroll to explore
+                        </span>
+                    </div>
+
                     <span className="hero-vert-text">SS 2026 — Premium Streetwear — Limited Drops</span>
                 </div>
 
@@ -321,8 +265,8 @@ function Home() {
                                     <rect width="320" height="400" fill={`url(#bg${i})`} />
                                     <rect width="320" height="400" fill={`url(#gl${i})`} />
                                     <g opacity="0.15" fill="none" stroke={`hsl(${p.accent})`} strokeWidth="0.5">
-                                        {[60, 120, 180, 240].map(x => <line key={x} x1={x} y1="0" x2={x} y2="400" />)}
-                                        {[80, 160, 240, 320].map(y => <line key={y} x1="0" y1={y} x2="320" y2={y} />)}
+                                        {[60, 120, 180, 240].map(xx => <line key={xx} x1={xx} y1="0" x2={xx} y2="400" />)}
+                                        {[80, 160, 240, 320].map(yy => <line key={yy} x1="0" y1={yy} x2="320" y2={yy} />)}
                                     </g>
                                     <path d="M100,60 L220,60 L240,110 L260,300 L200,310 L160,320 L120,310 L60,300 L80,110 Z"
                                         fill={`hsl(${p.accent})`} fillOpacity="0.12"
