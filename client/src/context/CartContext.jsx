@@ -42,4 +42,4 @@ function CartProvider({ children }) {
     );
 }
 
-export default CartProvider;
+export default CartProvider;    

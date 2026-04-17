@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../components/Layout/Navbar";
-import TShirtCanvas from "../components/Effects/TShirtCanvas";
+import AuroraOrb from "../components/Effects/AuroraOrb";
 
 /* ─── Static data ─────────────────────────────────────────────── */
 const MARQUEE_ITEMS = [
@@ -52,9 +52,6 @@ function addToCart(name, price, setBadge) {
 
 /* ─── Component ────────────────────────────────────────────────── */
 function Home() {
-    /* t-shirt animation gate */
-    const [shirtDone, setShirtDone] = useState(false);
-
     /* ── Scroll reveal ─────────────────────────────────────── */
     useEffect(() => {
         const obs = new IntersectionObserver(
@@ -143,48 +140,9 @@ function Home() {
                     </div>
                 </div>
 
-                {/* ── T-SHIRT ANIMATION ── */}
+                {/* ── AURORA ORB ── */}
                 <div className="hero-right">
-                    <TShirtCanvas onComplete={() => setShirtDone(true)} />
-
-                    {/* "scroll complete" pulse badge — appears when done */}
-                    <div
-                        className="shirt-done-badge"
-                        style={{
-                            position: "absolute",
-                            bottom: "40px",
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                            opacity: shirtDone ? 1 : 0,
-                            transition: "opacity 0.6s ease 0.3s",
-                            pointerEvents: "none",
-                            zIndex: 2,
-                        }}
-                    >
-                        <span style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            fontSize: "9px",
-                            fontWeight: 700,
-                            letterSpacing: "0.22em",
-                            textTransform: "uppercase",
-                            color: "rgba(167,201,87,0.7)",
-                            fontFamily: "'Space Grotesk', sans-serif",
-                        }}>
-                            <span style={{
-                                display: "inline-block",
-                                width: "6px",
-                                height: "6px",
-                                borderRadius: "50%",
-                                background: "#a7c957",
-                                boxShadow: "0 0 8px rgba(167,201,87,0.8)",
-                                animation: shirtDone ? "scrollPulse 1.5s ease-in-out infinite" : "none",
-                            }} />
-                            Scroll to explore
-                        </span>
-                    </div>
-
+                    <AuroraOrb />
                     <span className="hero-vert-text">SS 2026 — Premium Streetwear — Limited Drops</span>
                 </div>
 

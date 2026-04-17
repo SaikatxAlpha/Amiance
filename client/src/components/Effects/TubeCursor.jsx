@@ -1,6 +1,40 @@
 import { useEffect } from "react";
 
-const SEGMENTS = 22;
+const SEGMENTS = 28;
+
+// Vibrant palette for the rainbow tube
+const PALETTE = [
+    { h: 280, s: 85, l: 65 },  // violet
+    { h: 310, s: 90, l: 60 },  // magenta
+    { h: 340, s: 85, l: 65 },  // rose
+    { h: 10, s: 90, l: 62 },  // orange-red
+    { h: 35, s: 95, l: 58 },  // orange
+    { h: 52, s: 95, l: 55 },  // amber
+    { h: 85, s: 75, l: 52 },  // lime
+    { h: 155, s: 80, l: 48 },  // emerald
+    { h: 190, s: 85, l: 52 },  // cyan
+    { h: 215, s: 85, l: 62 },  // sky blue
+];
+
+function lerpColor(a, b, t) {
+    return {
+        h: a.h + (b.h - a.h) * t,
+        s: a.s + (b.s - a.s) * t,
+        l: a.l + (b.l - a.l) * t,
+    };
+}
+
+function getColor(progress, timeOffset) {
+    // Shift through palette over time
+    const totalColors = PALETTE.length;
+    const shifted = ((progress + timeOffset) % 1 + 1) % 1;
+    const idx = shifted * (totalColors - 1);
+    const i = Math.floor(idx);
+    const t = idx - i;
+    const a = PALETTE[i % totalColors];
+    const b = PALETTE[(i + 1) % totalColors];
+    return lerpColor(a, b, t);
+}
 
 function TubeCursor() {
     useEffect(() => {
@@ -14,39 +48,38 @@ function TubeCursor() {
                 border-radius: 50%;
                 pointer-events: none;
                 transform: translate(-50%, -50%);
-                will-change: transform, left, top, opacity;
+                will-change: transform, left, top;
                 mix-blend-mode: screen;
                 z-index: 999999;
+                transition: width 0.1s, height 0.1s;
             }
             .tube-head {
                 position: fixed;
-                width: 8px;
-                height: 8px;
+                width: 9px;
+                height: 9px;
                 border-radius: 50%;
                 pointer-events: none;
                 transform: translate(-50%, -50%);
-                background: #a7c957;
-                box-shadow: 0 0 12px #a7c957, 0 0 24px rgba(167,201,87,0.6);
                 z-index: 999999;
                 will-change: left, top;
-                transition: width 0.2s, height 0.2s;
+                transition: width 0.2s, height 0.2s, background 0.1s, box-shadow 0.1s;
             }
             .tube-ring {
                 position: fixed;
-                width: 36px;
-                height: 36px;
+                width: 38px;
+                height: 38px;
                 border-radius: 50%;
                 pointer-events: none;
                 transform: translate(-50%, -50%);
-                border: 1px solid rgba(167,201,87,0.4);
                 z-index: 999998;
                 will-change: left, top;
-                transition: width 0.3s, height 0.3s, border-color 0.3s;
+                transition: width 0.3s, height 0.3s, border-color 0.2s;
+                border: 1.5px solid rgba(255,120,200,0.5);
             }
             body:has(a:hover) .tube-head,
-            body:has(button:hover) .tube-head { width: 14px; height: 14px; }
+            body:has(button:hover) .tube-head { width: 16px; height: 16px; }
             body:has(a:hover) .tube-ring,
-            body:has(button:hover) .tube-ring { width: 52px; height: 52px; border-color: rgba(167,201,87,0.7); }
+            body:has(button:hover) .tube-ring { width: 56px; height: 56px; }
         `;
         document.head.appendChild(style);
 
@@ -55,20 +88,17 @@ function TubeCursor() {
         container.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:999997;overflow:hidden;";
         document.body.appendChild(container);
 
-        /* head dot */
         const head = document.createElement("div");
         head.className = "tube-head";
         document.body.appendChild(head);
 
-        /* ring */
         const ring = document.createElement("div");
         ring.className = "tube-ring";
         document.body.appendChild(ring);
 
-        /* tube segments */
         const segs = Array.from({ length: SEGMENTS }, (_, i) => {
             const progress = 1 - i / SEGMENTS;
-            const size = Math.max(3, progress * 16);
+            const size = Math.max(3, progress * 18);
             const el = document.createElement("div");
             el.className = "tube-seg";
             el.style.width = size + "px";
@@ -79,42 +109,51 @@ function TubeCursor() {
 
         const mouse = { x: -200, y: -200 };
         const ringPos = { x: -200, y: -200 };
+        let colorOffset = 0;
 
         const onMove = (e) => {
             mouse.x = e.clientX;
             mouse.y = e.clientY;
-            head.style.left = e.clientX + "px";
-            head.style.top = e.clientY + "px";
         };
         document.addEventListener("mousemove", onMove);
 
         let raf;
         const animate = () => {
-            /* ring lerp */
-            ringPos.x += (mouse.x - ringPos.x) * 0.1;
-            ringPos.y += (mouse.y - ringPos.y) * 0.1;
+            colorOffset = (colorOffset + 0.004) % 1;
+
+            // Animate head color
+            const headColor = getColor(0, colorOffset);
+            const headStr = `hsl(${headColor.h}, ${headColor.s}%, ${headColor.l}%)`;
+            head.style.left = mouse.x + "px";
+            head.style.top = mouse.y + "px";
+            head.style.background = headStr;
+            head.style.boxShadow = `0 0 14px ${headStr}, 0 0 30px ${headStr}55`;
+
+            // Ring color
+            const ringColor = getColor(0.5, colorOffset);
             ring.style.left = ringPos.x + "px";
             ring.style.top = ringPos.y + "px";
+            ring.style.borderColor = `hsla(${ringColor.h}, ${ringColor.s}%, ${ringColor.l}%, 0.6)`;
+            ring.style.boxShadow = `0 0 8px hsla(${ringColor.h}, ${ringColor.s}%, ${ringColor.l}%, 0.2)`;
+            ringPos.x += (mouse.x - ringPos.x) * 0.1;
+            ringPos.y += (mouse.y - ringPos.y) * 0.1;
 
-            /* tube segments */
             segs.forEach((seg, i) => {
                 const target = i === 0 ? mouse : segs[i - 1];
-                const ease = Math.max(0.07, 0.38 - i * 0.014);
+                const ease = Math.max(0.07, 0.38 - i * 0.012);
                 seg.x += (target.x - seg.x) * ease;
                 seg.y += (target.y - seg.y) * ease;
 
                 const progress = 1 - i / SEGMENTS;
-                const alpha = 0.08 + progress * 0.75;
-                /* hue shifts slightly: green → lime */
-                const hue = 80 + progress * 30;
-                const sat = 55 + progress * 20;
-                const lit = 42 + progress * 18;
+                const alpha = 0.1 + progress * 0.72;
+                const positionFrac = i / SEGMENTS;
+                const c = getColor(positionFrac, colorOffset);
 
                 const el = seg.el;
                 el.style.left = seg.x + "px";
                 el.style.top = seg.y + "px";
-                el.style.background = `hsla(${hue},${sat}%,${lit}%,${alpha})`;
-                el.style.boxShadow = `0 0 ${seg.size * 1.8}px hsla(${hue},${sat}%,${lit + 10}%,${alpha * 0.55})`;
+                el.style.background = `hsla(${c.h}, ${c.s}%, ${c.l}%, ${alpha})`;
+                el.style.boxShadow = `0 0 ${seg.size * 2}px hsla(${c.h}, ${c.s}%, ${c.l + 15}%, ${alpha * 0.6})`;
             });
 
             raf = requestAnimationFrame(animate);

@@ -16,6 +16,7 @@ function Navbar() {
                 AMIANCE
             </Link>
 
+            {/* Centered nav links */}
             <ul className="nav-links">
                 <li>
                     <Link to="/shop" className={isActive("/shop") ? "active" : ""}>
