@@ -53,11 +53,11 @@ function ParticleCanvas({ style = {}, mini = false }) {
                 // gentle pulsing alpha
                 const pulse = Math.sin(this.time + this.pulsePhase) * 0.15;
                 ctx.globalAlpha = Math.max(0.05, this.alpha + pulse);
-                
+
                 // soft glow
                 ctx.shadowColor = this.color;
                 ctx.shadowBlur = mini ? 6 : 10;
-                
+
                 ctx.fillStyle = this.color;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);

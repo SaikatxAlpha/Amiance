@@ -7,29 +7,31 @@ function Navbar() {
 
     return (
         <nav className="navbar">
-            <div className="container nav-content">
-                <Link to="/">
-                    <h2 className="logo">Zozo</h2>
-                </Link>
+            {/* Logo — Link prevents full reload */}
+            <Link to="/" className="logo-mark" style={{ textDecoration: "none" }}>
+                AMIANCE
+            </Link>
 
-                <div className="nav-links">
-                    <Link to="/" className={location.pathname === "/" ? "active" : ""}>
-                        Home
-                    </Link>
-                    <Link to="/shop" className={location.pathname === "/shop" ? "active" : ""}>
-                        Shop
-                    </Link>
+            <ul className="nav-links">
+                <li>
                     <Link
-                        to="/cart"
-                        className={`nav-cart-link ${location.pathname === "/cart" ? "active" : ""}`}
+                        to="/shop"
+                        className={location.pathname === "/shop" ? "active" : ""}
                     >
-                        Cart
-                        {cartCount > 0 && (
-                            <span className="cart-badge">{cartCount}</span>
-                        )}
+                        Collections
                     </Link>
-                </div>
-            </div>
+                </li>
+                <li><a href="#">Lookbook</a></li>
+                <li><a href="#">About</a></li>
+                <li><a href="#">Journal</a></li>
+            </ul>
+
+            {/* Cart button — Link wraps button so the whole thing is clickable */}
+            <Link to="/cart" style={{ textDecoration: "none" }}>
+                <button className="nav-cta">
+                    Cart&nbsp;({cartCount})
+                </button>
+            </Link>
         </nav>
     );
 }
