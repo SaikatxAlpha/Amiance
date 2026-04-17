@@ -5,7 +5,7 @@ import Navbar from "../components/Layout/Navbar";
 /* ─── Static data ─────────────────────────────────────────────── */
 const MARQUEE_ITEMS = [
     { text: "Premium Quality", accent: false },
-    { text: "SS 2025", accent: true },
+    { text: "SS 2026", accent: true },
     { text: "Limited Drops", accent: false },
     { text: "Organic Cotton", accent: false },
     { text: "Wear The Streets", accent: true },
@@ -13,7 +13,7 @@ const MARQUEE_ITEMS = [
     { text: "Zero Waste", accent: false },
     { text: "New Collection", accent: true },
     { text: "Streetwear Redefined", accent: false },
-    { text: "URBN", accent: true },
+    { text: "AMIANCE", accent: true },
 ];
 
 const STATS = [
@@ -131,12 +131,8 @@ function Home() {
     const canvasRef = useRef(null);
     const rafRef = useRef(null);
     const tRef = useRef(0);
-    const curRef = useRef(null);
-    const ringRef = useRef(null);
-    const ringPos = useRef({ x: 0, y: 0 });
-    const mouse = useRef({ x: 0, y: 0 });
 
-    /* Orb */
+    /* Orb animation */
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -144,35 +140,19 @@ function Home() {
         const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
         resize();
         window.addEventListener("resize", resize);
-        const tick = () => { tRef.current += 0.008; drawOrbFrame(ctx, canvas, tRef.current); rafRef.current = requestAnimationFrame(tick); };
+        const tick = () => {
+            tRef.current += 0.008;
+            drawOrbFrame(ctx, canvas, tRef.current);
+            rafRef.current = requestAnimationFrame(tick);
+        };
         rafRef.current = requestAnimationFrame(tick);
         return () => { cancelAnimationFrame(rafRef.current); window.removeEventListener("resize", resize); };
     }, []);
 
-    /* Cursor */
-    useEffect(() => {
-        const dot = curRef.current;
-        const ring = ringRef.current;
-        if (!dot || !ring) return;
-        const onMove = (e) => {
-            mouse.current = { x: e.clientX, y: e.clientY };
-            dot.style.left = e.clientX + "px"; dot.style.top = e.clientY + "px";
-        };
-        document.addEventListener("mousemove", onMove);
-        let id;
-        const animRing = () => {
-            ringPos.current.x += (mouse.current.x - ringPos.current.x) * 0.12;
-            ringPos.current.y += (mouse.current.y - ringPos.current.y) * 0.12;
-            ring.style.left = ringPos.current.x + "px"; ring.style.top = ringPos.current.y + "px";
-            id = requestAnimationFrame(animRing);
-        };
-        id = requestAnimationFrame(animRing);
-        return () => { document.removeEventListener("mousemove", onMove); cancelAnimationFrame(id); };
-    }, []);
-
     /* Orb parallax */
     useEffect(() => {
-        const canvas = canvasRef.current; if (!canvas) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
         const onMove = (e) => {
             canvas.style.transform = `translate(${(e.clientX / window.innerWidth - 0.5) * 20}px,${(e.clientY / window.innerHeight - 0.5) * 20}px)`;
         };
@@ -182,7 +162,10 @@ function Home() {
 
     /* Scroll reveal */
     useEffect(() => {
-        const obs = new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add("visible"); obs.unobserve(e.target); } }), { threshold: 0.15 });
+        const obs = new IntersectionObserver(
+            entries => entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add("visible"); obs.unobserve(e.target); } }),
+            { threshold: 0.15 }
+        );
         document.querySelectorAll(".reveal").forEach(el => obs.observe(el));
         return () => obs.disconnect();
     }, []);
@@ -197,7 +180,16 @@ function Home() {
                 if (p < 1) requestAnimationFrame(tick);
             })(performance.now());
         };
-        const obs = new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) { const el = e.target.querySelector(".stat-num-wrap[data-count]"); if (el) animCount(el, +el.dataset.count); obs.unobserve(e.target); } }), { threshold: 0.5 });
+        const obs = new IntersectionObserver(
+            entries => entries.forEach(e => {
+                if (e.isIntersecting) {
+                    const el = e.target.querySelector(".stat-num-wrap[data-count]");
+                    if (el) animCount(el, +el.dataset.count);
+                    obs.unobserve(e.target);
+                }
+            }),
+            { threshold: 0.5 }
+        );
         document.querySelectorAll(".stat-cell").forEach(el => obs.observe(el));
         return () => obs.disconnect();
     }, []);
@@ -209,7 +201,8 @@ function Home() {
         btns.forEach(btn => {
             const onMove = e => { const r = btn.getBoundingClientRect(); btn.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * 0.25}px,${(e.clientY - r.top - r.height / 2) * 0.35}px) translateY(-3px)`; };
             const onLeave = () => { btn.style.transform = ""; };
-            btn.addEventListener("mousemove", onMove); btn.addEventListener("mouseleave", onLeave);
+            btn.addEventListener("mousemove", onMove);
+            btn.addEventListener("mouseleave", onLeave);
             handlers.push({ btn, onMove, onLeave });
         });
         return () => handlers.forEach(({ btn, onMove, onLeave }) => { btn.removeEventListener("mousemove", onMove); btn.removeEventListener("mouseleave", onLeave); });
@@ -219,9 +212,7 @@ function Home() {
 
     return (
         <>
-            {/* Custom cursor */}
-            <div id="cursor" ref={curRef} />
-            <div id="cursor-ring" ref={ringRef} />
+            {/* Noise overlay */}
             <div className="noise" />
 
             <Navbar />
@@ -250,14 +241,14 @@ function Home() {
 
                 <div className="hero-right">
                     <canvas ref={canvasRef} id="orb-canvas" />
-                    <span className="hero-vert-text">SS 2025 — Premium Streetwear — Limited Drops</span>
+                    <span className="hero-vert-text">SS 2026 — Premium Streetwear — Limited Drops</span>
                 </div>
 
                 <div className="scroll-indicator">
                     <div className="scroll-line" />
                     <span className="scroll-text">Scroll</span>
                 </div>
-                <div className="year-stamp">© 2025</div>
+                <div className="year-stamp">© 2026</div>
             </section>
 
             {/* ── MARQUEE ─────────────────────────────── */}
@@ -285,7 +276,7 @@ function Home() {
             {/* ── FEATURES ────────────────────────────── */}
             <section id="features">
                 <div className="feat-heading reveal">
-                    <div className="section-label"><span>Why URBN</span></div>
+                    <div className="section-label"><span>Why AMIANCE</span></div>
                     <h2 className="feat-title-large">
                         <em>Built for</em>The Bold<br />Ones.
                     </h2>
@@ -338,7 +329,7 @@ function Home() {
                                         stroke={`hsl(${p.accent})`} strokeOpacity="0.5" strokeWidth="0.8" opacity="0.7" />
                                     <path d="M100,60 Q80,50 60,80 L80,110" fill="none" stroke={`hsl(${p.accent})`} strokeOpacity="0.5" strokeWidth="0.8" opacity="0.7" />
                                     <path d="M220,60 Q240,50 260,80 L240,110" fill="none" stroke={`hsl(${p.accent})`} strokeOpacity="0.5" strokeWidth="0.8" opacity="0.7" />
-                                    <text x="50%" y="388" textAnchor="middle" fontSize="8" fontFamily="'Space Grotesk',sans-serif" letterSpacing="4" fill={`hsl(${p.accent})`} fillOpacity="0.4" fontWeight="600">SS 2025</text>
+                                    <text x="50%" y="388" textAnchor="middle" fontSize="8" fontFamily="'Space Grotesk',sans-serif" letterSpacing="4" fill={`hsl(${p.accent})`} fillOpacity="0.4" fontWeight="600">SS 2026</text>
                                 </svg>
                                 <div className="product-overlay">
                                     <button className="quick-add" onClick={() => addToCart(p.name, p.price, () => { })}>Quick Add</button>
@@ -398,12 +389,12 @@ function Home() {
                 </div>
             </footer>
             <div className="foot-bottom">
-                <span className="foot-copy">© 2025 URBN. All rights reserved.</span>
+                <span className="foot-copy">© 2026 AMIANCE. All rights reserved.</span>
                 <div className="foot-social">
-                    <a href="#">LinkdIn</a>
+                    <a href="#">LinkedIn</a>
                     <a href="#">Instagram</a>
                     <a href="#">Twitter</a>
-                    <a href="#">Facebook</a>
+                    <a href="#">TikTok</a>
                 </div>
             </div>
         </>

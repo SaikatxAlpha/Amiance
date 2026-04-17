@@ -5,19 +5,20 @@ function Navbar() {
     const { cartCount } = useCart();
     const location = useLocation();
 
+    const isActive = (path) => location.pathname === path;
+
     return (
-        <nav className="navbar">
-            {/* Logo — Link prevents full reload */}
-            <Link to="/" className="logo-mark" style={{ textDecoration: "none" }}>
+        <nav className="navbar glass-nav">
+            {/* Glass morphism background layer */}
+            <div className="nav-glass-bg" />
+
+            <Link to="/" className="logo-mark nav-logo">
                 AMIANCE
             </Link>
 
             <ul className="nav-links">
                 <li>
-                    <Link
-                        to="/shop"
-                        className={location.pathname === "/shop" ? "active" : ""}
-                    >
+                    <Link to="/shop" className={isActive("/shop") ? "active" : ""}>
                         Collections
                     </Link>
                 </li>
@@ -26,10 +27,12 @@ function Navbar() {
                 <li><a href="#">Journal</a></li>
             </ul>
 
-            {/* Cart button — Link wraps button so the whole thing is clickable */}
-            <Link to="/cart" style={{ textDecoration: "none" }}>
+            <Link to="/cart" className="nav-cart-link">
                 <button className="nav-cta">
-                    Cart&nbsp;({cartCount})
+                    Cart
+                    {cartCount > 0 && (
+                        <span className="cart-badge">{cartCount}</span>
+                    )}
                 </button>
             </Link>
         </nav>

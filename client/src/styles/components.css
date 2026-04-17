@@ -1,46 +1,67 @@
 /* ============================================================
    components.css  —  Reusable UI components
-   Navbar · ProductCard · MarqueeStrip · StatCell · FeatItem
-   QuickAdd · FooterBrand
+   Navbar (glass) · ProductCard · MarqueeStrip · StatCell
+   FeatItem · QuickAdd · FooterBrand
    ============================================================ */
 
-/* ─── NAVBAR ────────────────────────────────────────────── */
+/* ─── NAVBAR — GLASSMORPHISM ────────────────────────────── */
 .navbar {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     z-index: 500;
-    padding: 24px 60px;
+    padding: 0 60px;
+    height: 72px;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.navbar::before {
+/* Glass morphism layer */
+.glass-nav::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, rgba(10, 15, 10, 0.92) 0%, transparent 100%);
+    backdrop-filter: blur(22px) saturate(200%);
+    -webkit-backdrop-filter: blur(22px) saturate(200%);
+    background: rgba(8, 13, 8, 0.55);
+    border-bottom: 1px solid rgba(167, 201, 87, 0.12);
+    box-shadow:
+        0 1px 0 rgba(167, 201, 87, 0.08),
+        0 8px 32px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(167, 201, 87, 0.06);
     pointer-events: none;
+    z-index: -1;
 }
 
-.logo-mark {
+/* Subtle shimmer on glass bar */
+.glass-nav::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.nav-logo {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 32px;
-    letter-spacing: 0.15em;
-    background: linear-gradient(135deg, var(--g3), var(--cream));
+    font-size: 28px;
+    letter-spacing: 0.18em;
+    background: linear-gradient(135deg, var(--g3) 0%, var(--cream) 60%, var(--g3) 100%);
+    background-size: 200% 100%;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    position: relative;
-    z-index: 1;
     cursor: none;
-    transition: letter-spacing .4s ease;
+    transition: letter-spacing .4s ease, background-position .6s ease;
+    text-decoration: none;
 }
 
-.logo-mark:hover {
-    letter-spacing: 0.25em;
+.nav-logo:hover {
+    letter-spacing: 0.26em;
+    background-position: 100% 0;
 }
 
 .nav-links {
@@ -53,7 +74,7 @@
 
 .nav-links a {
     text-decoration: none;
-    color: rgba(242, 232, 207, 0.5);
+    color: rgba(242, 232, 207, 0.45);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.15em;
@@ -73,22 +94,20 @@
     height: 1px;
     background: var(--g3);
     transition: width .4s ease;
+    box-shadow: 0 0 6px rgba(167, 201, 87, 0.5);
 }
 
 .nav-links a:hover {
     color: var(--cream);
 }
 
-.nav-links a:hover::after {
+.nav-links a:hover::after,
+.nav-links a.active::after {
     width: 100%;
 }
 
 .nav-links a.active {
     color: var(--g3);
-}
-
-.nav-links a.active::after {
-    width: 100%;
 }
 
 .nav-cart-link {
@@ -97,7 +116,8 @@
 }
 
 .nav-cta {
-    border: 1px solid rgba(167, 201, 87, 0.35);
+    position: relative;
+    border: 1px solid rgba(167, 201, 87, 0.3);
     padding: 10px 24px;
     font-size: 11px;
     font-weight: 700;
@@ -105,15 +125,37 @@
     text-transform: uppercase;
     color: var(--g3);
     cursor: none;
-    transition: all .3s ease;
-    background: transparent;
+    background: rgba(167, 201, 87, 0.04);
     font-family: 'Space Grotesk', sans-serif;
+    overflow: hidden;
+    transition: background .3s ease, color .3s ease, border-color .3s ease,
+        box-shadow .3s ease;
+}
+
+.nav-cta::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--g3);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .35s var(--ease-out);
 }
 
 .nav-cta:hover {
-    background: var(--g3);
     color: var(--dark);
     border-color: var(--g3);
+    box-shadow: 0 0 20px rgba(167, 201, 87, 0.15);
+}
+
+.nav-cta:hover::before {
+    transform: scaleX(1);
+}
+
+.nav-cta span,
+.nav-cta>* {
+    position: relative;
+    z-index: 1;
 }
 
 .cart-badge {
@@ -134,7 +176,7 @@
     font-family: 'Space Grotesk', sans-serif;
 }
 
-/* ─── PRODUCT CARD ──────────────────────────────────────── */
+/* ─── PRODUCT CARD (home page scroll) ──────────────────── */
 .product-card {
     flex-shrink: 0;
     width: 320px;
@@ -228,7 +270,7 @@
     background-clip: text;
 }
 
-/* ─── PRODUCT DETAIL (used on product page) ─────────────── */
+/* ─── PRODUCT DETAIL ────────────────────────────────────── */
 .product-detail {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -515,7 +557,7 @@
 /* ─── RESPONSIVE — COMPONENTS ───────────────────────────── */
 @media (max-width:900px) {
     .navbar {
-        padding: 20px 24px;
+        padding: 0 24px;
     }
 
     .nav-links {
