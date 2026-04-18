@@ -117,7 +117,7 @@ function About() {
                 <section className="abt-team">
                     <div className="abt-team-head abt-reveal">
                         <p className="abt-section-label">The Minds Behind It</p>
-                        <h2 className="abt-team-title">Both Us.</h2>
+                        <h2 className="abt-team-title">Both of Us.</h2>
                     </div>
                     <div className="abt-team-grid">
                         {TEAM.map((t, i) => (
