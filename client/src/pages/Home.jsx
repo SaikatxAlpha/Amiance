@@ -283,8 +283,8 @@ function Home() {
                 <div className="foot-col">
                     <h4>Support</h4>
                     <ul>
-                        <li><a href="#">Sizing Guide</a></li>
-                        <li><a href="#">Shipping</a></li>
+                        <li><a href="/sizeguide">Sizing Guide</a></li>
+                        <li><a href="/shipping">Shipping</a></li>
                         <li><a href="/contact">Returns</a></li>
                         <li><a href="/contact">Contact</a></li>
                     </ul>
