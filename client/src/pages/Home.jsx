@@ -274,7 +274,7 @@ function Home() {
                 <div className="foot-col">
                     <h4>Brand</h4>
                     <ul>
-                        <li><a href="#">Our Story</a></li>
+                        <li><a href="/about">Our Story</a></li>
                         <li><a href="#">Lookbook</a></li>
                         <li><a href="#">Journal</a></li>
                         <li><a href="#">Sustainability</a></li>
@@ -285,8 +285,8 @@ function Home() {
                     <ul>
                         <li><a href="#">Sizing Guide</a></li>
                         <li><a href="#">Shipping</a></li>
-                        <li><a href="#">Returns</a></li>
-                        <li><a href="#">Contact</a></li>
+                        <li><a href="/contact">Returns</a></li>
+                        <li><a href="/contact">Contact</a></li>
                     </ul>
                 </div>
             </footer>

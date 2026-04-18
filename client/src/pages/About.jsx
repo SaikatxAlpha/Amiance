@@ -50,7 +50,7 @@ function About() {
                             <span className="abt-title-solid">BOLD.</span>
                         </h1>
                         <p className="abt-hero-desc abt-reveal">
-                            AMIANCE was born in 2021 with one conviction — that streetwear
+                            AMIANCE was born in 2026 with one conviction — that streetwear
                             could be responsible, radical, and unrepeatable. We don't chase
                             trends. We set them, then walk away.
                         </p>
