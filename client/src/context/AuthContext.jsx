@@ -7,8 +7,14 @@ function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
 
     const login = (email, password) => {
-        // Mock login — replace with real API call
-        const mockUser = { id: 1, name: "Alex Monroe", email, avatar: null, role: "user" };
+        const isAdmin = email === "admin@amiance.co";
+        const mockUser = {
+            id: 1,
+            name: isAdmin ? "Admin" : "Alex Monroe",
+            email,
+            avatar: null,
+            role: isAdmin ? "admin" : "user",
+        };
         setUser(mockUser);
         return mockUser;
     };

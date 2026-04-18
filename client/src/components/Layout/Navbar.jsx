@@ -1,10 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
+import { useAuth } from "../../context/AuthContext";
 import { useState, useEffect } from "react";
 import "./navbar.css"
 
 function Navbar() {
     const { cartCount } = useCart();
+    const { user } = useAuth();
     const location = useLocation();
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -32,19 +34,48 @@ function Navbar() {
                     <li><a href="/shop">Lookbook</a></li>
                     <li><a href="/about">About</a></li>
                     <li><a href="/shop">Journal</a></li>
+                    {user?.role === "admin" && (
+                        <li>
+                            <Link
+                                to="/admin"
+                                className={location.pathname.startsWith("/admin") ? "active" : ""}
+                                style={{ color: "rgba(167,201,87,0.85)" }}
+                            >
+                                Admin
+                            </Link>
+                        </li>
+                    )}
                 </ul>
 
                 {/* Right cluster */}
                 <div className="nav-right">
-                    <Link to="/login" className="nav-login">
-                        Log In
-                    </Link>
-                    <Link to="/signup" className="nav-signup">
-                        <span>Sign Up</span>
-                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="nav-signup-arrow">
-                            <path d="M2 8L8 2M8 2H3.5M8 2V6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                    </Link>
+                    {user ? (
+                        <>
+                            <Link to="/profile" className="nav-login">
+                                {user.name.split(" ")[0]}
+                            </Link>
+                            {user.role === "admin" && (
+                                <Link to="/admin" className="nav-signup" style={{ background: "rgba(167,201,87,0.15)", border: "1px solid rgba(167,201,87,0.4)", color: "var(--g3)", clipPath: "none" }}>
+                                    <span>Dashboard</span>
+                                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="nav-signup-arrow">
+                                        <path d="M2 8L8 2M8 2H3.5M8 2V6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </Link>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <Link to="/login" className="nav-login">
+                                Log In
+                            </Link>
+                            <Link to="/signup" className="nav-signup">
+                                <span>Sign Up</span>
+                                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="nav-signup-arrow">
+                                    <path d="M2 8L8 2M8 2H3.5M8 2V6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            </Link>
+                        </>
+                    )}
                     <Link to="/cart" className="nav-cart-link">
                         <button className="nav-cta">
                             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="nav-cart-icon">
@@ -78,13 +109,22 @@ function Navbar() {
                         <li><a href="/shop">Lookbook</a></li>
                         <li><a href="/about">About</a></li>
                         <li><a href="/shop">Journal</a></li>
+                        {user?.role === "admin" && (
+                            <li><Link to="/admin" style={{ color: "var(--g3)" }}>Admin Dashboard</Link></li>
+                        )}
                     </ul>
                     <div className="nav-drawer__divider" />
                     <div className="nav-drawer__auth">
-                        <Link to="/login" className="nav-drawer__login">Log In</Link>
-                        <Link to="/signup" className="nav-drawer__signup">
-                            <span>Create Account</span>
-                        </Link>
+                        {user ? (
+                            <Link to="/profile" className="nav-drawer__login">{user.name}</Link>
+                        ) : (
+                            <>
+                                <Link to="/login" className="nav-drawer__login">Log In</Link>
+                                <Link to="/signup" className="nav-drawer__signup">
+                                    <span>Create Account</span>
+                                </Link>
+                            </>
+                        )}
                     </div>
                     <Link to="/cart" className="nav-drawer__cart">
                         <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
