@@ -294,9 +294,9 @@ function Home() {
                 <span className="foot-copy">© 2026 AMIANCE. All rights reserved.</span>
                 <div className="foot-social">
                     <a href="/about">LinkedIn</a>
-                    <a href="#">Instagram</a>
-                    <a href="#">Twitter</a>
-                    <a href="#">TikTok</a>
+                    <a href="/about">Instagram</a>
+                    <a href="/about">Twitter</a>
+                    <a href="/about">TikTok</a>
                 </div>
             </div>
         </>
