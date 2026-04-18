@@ -293,7 +293,7 @@ function Home() {
             <div className="foot-bottom">
                 <span className="foot-copy">© 2026 AMIANCE. All rights reserved.</span>
                 <div className="foot-social">
-                    <a href="#">LinkedIn</a>
+                    <a href="/about">LinkedIn</a>
                     <a href="#">Instagram</a>
                     <a href="#">Twitter</a>
                     <a href="#">TikTok</a>
