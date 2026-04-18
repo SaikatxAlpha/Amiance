@@ -1555,12 +1555,12 @@
     }
 
     .hero-left {
-        padding: 140px 24px 60px;
+        padding: 130px 24px 72px;
+        min-height: 100vh;
     }
 
     .hero-right {
-        height: 340px;
-        order: -1;
+        display: none;
     }
 
     #stats {
