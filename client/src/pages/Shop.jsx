@@ -265,9 +265,9 @@ function Shop() {
                 <span>© 2026 AMIANCE — All Rights Reserved</span>
                 <div>
                     <Link to="/">Home</Link>
-                    <a href="#">Lookbook</a>
-                    <a href="#">Sustainability</a>
-                    <a href="#">Contact</a>
+                    <a href="/shop">Lookbook</a>
+                    <a href="/shop">Sustainability</a>
+                    <a href="/contact">Contact</a>
                 </div>
             </div>
         </>

@@ -275,9 +275,9 @@ function Home() {
                     <h4>Brand</h4>
                     <ul>
                         <li><a href="/about">Our Story</a></li>
-                        <li><a href="#">Lookbook</a></li>
-                        <li><a href="#">Journal</a></li>
-                        <li><a href="#">Sustainability</a></li>
+                        <li><a href="/shop">Lookbook</a></li>
+                        <li><a href="/shop">Journal</a></li>
+                        <li><a href="/shop">Sustainability</a></li>
                     </ul>
                 </div>
                 <div className="foot-col">

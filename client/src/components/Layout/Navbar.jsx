@@ -29,9 +29,9 @@ function Navbar() {
                 {/* Center links */}
                 <ul className="nav-links">
                     <li><Link to="/shop" className={isActive("/shop") ? "active" : ""}>Collections</Link></li>
-                    <li><a href="#">Lookbook</a></li>
-                    <li><a href="#">About</a></li>
-                    <li><a href="#">Journal</a></li>
+                    <li><a href="/shop">Lookbook</a></li>
+                    <li><a href="/about">About</a></li>
+                    <li><a href="/shop">Journal</a></li>
                 </ul>
 
                 {/* Right cluster */}
@@ -75,9 +75,9 @@ function Navbar() {
                 <div className="nav-drawer__inner">
                     <ul className="nav-drawer__links">
                         <li><Link to="/shop">Collections</Link></li>
-                        <li><a href="#">Lookbook</a></li>
-                        <li><a href="#">About</a></li>
-                        <li><a href="#">Journal</a></li>
+                        <li><a href="/shop">Lookbook</a></li>
+                        <li><a href="/about">About</a></li>
+                        <li><a href="/shop">Journal</a></li>
                     </ul>
                     <div className="nav-drawer__divider" />
                     <div className="nav-drawer__auth">
