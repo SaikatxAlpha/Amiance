@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import { useState, useEffect } from "react";
+import "./navbar.css"
 
 function Navbar() {
     const { cartCount } = useCart();
