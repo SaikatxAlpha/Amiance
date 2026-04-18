@@ -25,7 +25,6 @@ function lerpColor(a, b, t) {
 }
 
 function getColor(progress, timeOffset) {
-    // Shift through palette over time
     const totalColors = PALETTE.length;
     const shifted = ((progress + timeOffset) % 1 + 1) % 1;
     const idx = shifted * (totalColors - 1);
@@ -64,22 +63,8 @@ function TubeCursor() {
                 will-change: left, top;
                 transition: width 0.2s, height 0.2s, background 0.1s, box-shadow 0.1s;
             }
-            .tube-ring {
-                position: fixed;
-                width: 38px;
-                height: 38px;
-                border-radius: 50%;
-                pointer-events: none;
-                transform: translate(-50%, -50%);
-                z-index: 999998;
-                will-change: left, top;
-                transition: width 0.3s, height 0.3s, border-color 0.2s;
-                border: 1.5px solid rgba(255,120,200,0.5);
-            }
             body:has(a:hover) .tube-head,
             body:has(button:hover) .tube-head { width: 16px; height: 16px; }
-            body:has(a:hover) .tube-ring,
-            body:has(button:hover) .tube-ring { width: 56px; height: 56px; }
         `;
         document.head.appendChild(style);
 
@@ -91,10 +76,6 @@ function TubeCursor() {
         const head = document.createElement("div");
         head.className = "tube-head";
         document.body.appendChild(head);
-
-        const ring = document.createElement("div");
-        ring.className = "tube-ring";
-        document.body.appendChild(ring);
 
         const segs = Array.from({ length: SEGMENTS }, (_, i) => {
             const progress = 1 - i / SEGMENTS;
@@ -108,7 +89,6 @@ function TubeCursor() {
         });
 
         const mouse = { x: -200, y: -200 };
-        const ringPos = { x: -200, y: -200 };
         let colorOffset = 0;
 
         const onMove = (e) => {
@@ -128,15 +108,6 @@ function TubeCursor() {
             head.style.top = mouse.y + "px";
             head.style.background = headStr;
             head.style.boxShadow = `0 0 14px ${headStr}, 0 0 30px ${headStr}55`;
-
-            // Ring color
-            const ringColor = getColor(0.5, colorOffset);
-            ring.style.left = ringPos.x + "px";
-            ring.style.top = ringPos.y + "px";
-            ring.style.borderColor = `hsla(${ringColor.h}, ${ringColor.s}%, ${ringColor.l}%, 0.6)`;
-            ring.style.boxShadow = `0 0 8px hsla(${ringColor.h}, ${ringColor.s}%, ${ringColor.l}%, 0.2)`;
-            ringPos.x += (mouse.x - ringPos.x) * 0.1;
-            ringPos.y += (mouse.y - ringPos.y) * 0.1;
 
             segs.forEach((seg, i) => {
                 const target = i === 0 ? mouse : segs[i - 1];
@@ -166,7 +137,6 @@ function TubeCursor() {
             document.body.style.cursor = "";
             style.remove();
             head.remove();
-            ring.remove();
             container.remove();
         };
     }, []);

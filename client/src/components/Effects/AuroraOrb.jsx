@@ -48,8 +48,8 @@ export default function AuroraOrb() {
 
         let W, H, rafId;
         let time = 0;
-        const tm = { x: 0, y: 0 };   // target mouse (normalised -0.5…0.5)
-        const sm = { x: 0, y: 0 };   // smoothed mouse
+        const tm = { x: 0, y: 0 };
+        const sm = { x: 0, y: 0 };
 
         /* Comets ─────────────────────────────────────────── */
         const comets = [];
@@ -82,14 +82,12 @@ export default function AuroraOrb() {
         };
         window.addEventListener("mousemove", onMove);
 
-        /* Render loop ────────────────────────────────────── */
         let cometTimer = 0;
 
         const render = () => {
             time += 0.011;
             cometTimer += 0.011;
 
-            /* smooth mouse */
             sm.x = lerp(sm.x, tm.x, 0.055);
             sm.y = lerp(sm.y, tm.y, 0.055);
 
@@ -120,9 +118,14 @@ export default function AuroraOrb() {
             ctx.fillStyle = halo;
             ctx.fillRect(0, 0, W, H);
 
-            /* ── 3. Plasma tendrils (screen blend) ────────── */
+            /* ── 3. Plasma tendrils — clipped to orb area ── */
             ctx.save();
+            /* Clip to a circle so plasma never bleeds outside the orb */
+            ctx.beginPath();
+            ctx.arc(cx, cy, R * 1.08, 0, Math.PI * 2);
+            ctx.clip();
             ctx.globalCompositeOperation = 'screen';
+
             const SEG = 128;
             for (let i = 0; i < SEG; i++) {
                 const ang = (i / SEG) * Math.PI * 2;
@@ -152,7 +155,6 @@ export default function AuroraOrb() {
             const pulse = 1 + Math.sin(time * 0.75) * 0.038;
             const cR = R * 0.80 * pulse;
 
-            // Outer atmospheric glow rings
             [[2.0, 0.04], [1.55, 0.08], [1.22, 0.18], [1.0, 0.55]].forEach(([scale, peakA]) => {
                 const gr = ctx.createRadialGradient(
                     cx - R * 0.08, cy - R * 0.12, 0,
@@ -214,7 +216,6 @@ export default function AuroraOrb() {
                 if (c.life <= 0) { comets.splice(i, 1); continue; }
 
                 const [cr, cg, cb] = c.col;
-                // Trail
                 ctx.save();
                 const tr = ctx.createLinearGradient(
                     c.x - c.vx * 12, c.y - c.vy * 12,
@@ -228,7 +229,6 @@ export default function AuroraOrb() {
                 ctx.strokeStyle = tr;
                 ctx.lineWidth = 1.5 * c.life;
                 ctx.stroke();
-                // Head dot
                 ctx.beginPath();
                 ctx.arc(c.x, c.y, 1.8 * c.life, 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(${cr},${cg},${cb},${c.life * 0.9})`;
