@@ -1,12 +1,15 @@
 import Navbar from "../components/Layout/Navbar";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 
 function Cart() {
     const { cart, removeFromCart, updateQty } = useCart();
+    const { user } = useAuth();
     const navigate = useNavigate();
+
     const subtotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
-    const shipping = subtotal >= 80 ? 0 : cart.length > 0 ? 5 : 0;
+    const shipping = subtotal >= 2000 ? 0 : cart.length > 0 ? 99 : 0;
     const total = subtotal + shipping;
 
     if (cart.length === 0) {
@@ -22,10 +25,12 @@ function Cart() {
                         <Link to="/shop">
                             <button className="btn-primary"><span>Browse Collection</span></button>
                         </Link>
-                        <div className="cart-empty-auth">
-                            <span>Already have an account?</span>
-                            <Link to="/login" className="cart-empty-login">Log In →</Link>
-                        </div>
+                        {!user && (
+                            <div className="cart-empty-auth">
+                                <span>Already have an account?</span>
+                                <Link to="/login" className="cart-empty-login">Log In →</Link>
+                            </div>
+                        )}
                     </div>
                 </div>
             </>
@@ -44,22 +49,27 @@ function Cart() {
                 </div>
 
                 <div className="cart-layout">
-                    {/* ── Items ── */}
+                    {/* Items */}
                     <div className="cart-items">
                         {cart.map((item) => (
-                            <div key={item.id} className="cart-item">
+                            <div key={`${item.id || item._id}-${item.size}`} className="cart-item">
                                 <img className="cart-item-img" src={item.image} alt={item.name} />
                                 <div className="cart-item-info">
-                                    <div className="cart-item-tag">{item.tag}</div>
+                                    {item.tag && <div className="cart-item-tag">{item.tag}</div>}
                                     <div className="cart-item-name">{item.name}</div>
-                                    <div className="cart-item-price">${item.price}</div>
+                                    {item.size && (
+                                        <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: "10px", color: "rgba(242,232,207,0.3)", marginTop: "2px" }}>
+                                            Size: {item.size}
+                                        </div>
+                                    )}
+                                    <div className="cart-item-price">₹{item.price.toLocaleString("en-IN")}</div>
                                 </div>
                                 <div className="qty-control">
-                                    <button onClick={() => updateQty(item.id, -1)}>−</button>
+                                    <button onClick={() => updateQty(item.id || item._id, -1)}>−</button>
                                     <span>{item.qty}</span>
-                                    <button onClick={() => updateQty(item.id, +1)}>+</button>
+                                    <button onClick={() => updateQty(item.id || item._id, +1)}>+</button>
                                 </div>
-                                <button className="btn-remove" onClick={() => removeFromCart(item.id)}>✕</button>
+                                <button className="btn-remove" onClick={() => removeFromCart(item.id || item._id)}>✕</button>
                             </div>
                         ))}
 
@@ -68,31 +78,31 @@ function Cart() {
                         </Link>
                     </div>
 
-                    {/* ── Summary ── */}
+                    {/* Summary */}
                     <div className="cart-summary">
                         <h2>Order Summary</h2>
 
                         <div className="summary-row">
                             <span>Subtotal</span>
-                            <span>${subtotal.toFixed(2)}</span>
+                            <span>₹{subtotal.toLocaleString("en-IN")}</span>
                         </div>
                         <div className="summary-row">
                             <span>Shipping</span>
-                            <span className="summary-shipping">
-                                {subtotal >= 80
+                            <span>
+                                {subtotal >= 2000
                                     ? <span className="summary-free">Free</span>
-                                    : `$${shipping.toFixed(2)}`}
+                                    : `₹${shipping}`}
                             </span>
                         </div>
-                        {subtotal > 0 && subtotal < 80 && (
+                        {subtotal > 0 && subtotal < 2000 && (
                             <div className="summary-freeship-hint">
-                                Add <strong>${(80 - subtotal).toFixed(2)}</strong> more for free shipping
+                                Add <strong>₹{(2000 - subtotal).toLocaleString("en-IN")}</strong> more for free shipping
                             </div>
                         )}
 
                         <div className="summary-total">
                             <span>Total</span>
-                            <span className="total-price">${total.toFixed(2)}</span>
+                            <span className="total-price">₹{total.toLocaleString("en-IN")}</span>
                         </div>
 
                         <button
@@ -102,26 +112,34 @@ function Cart() {
                             <span>Proceed to Checkout</span>
                         </button>
 
-                        {/* Auth prompt */}
-                        <div className="cart-auth-prompt">
-                            <div className="cart-auth-divider">
-                                <span className="cart-auth-divider-line" />
-                                <span className="cart-auth-divider-text">or</span>
-                                <span className="cart-auth-divider-line" />
-                            </div>
-                            <p className="cart-auth-text">
-                                Sign in for faster checkout,<br />
-                                order tracking &amp; exclusive drops.
-                            </p>
-                            <div className="cart-auth-btns">
-                                <Link to="/login" className="cart-auth-login">Log In</Link>
-                                <Link to="/signup" className="cart-auth-signup">
-                                    <span>Create Account</span>
-                                </Link>
-                            </div>
+                        {/* COD badge */}
+                        <div style={{ marginTop: "16px", display: "flex", alignItems: "center", gap: "8px", fontFamily: "'Space Grotesk',sans-serif", fontSize: "10px", color: "rgba(242,232,207,0.3)", letterSpacing: "0.08em" }}>
+                            <span style={{ color: "var(--g3)" }}>💵</span>
+                            Cash on Delivery available
                         </div>
 
-                        {/* Trust badges */}
+                        {/* Auth prompt */}
+                        {!user && (
+                            <div className="cart-auth-prompt">
+                                <div className="cart-auth-divider">
+                                    <span className="cart-auth-divider-line" />
+                                    <span className="cart-auth-divider-text">or</span>
+                                    <span className="cart-auth-divider-line" />
+                                </div>
+                                <p className="cart-auth-text">
+                                    Sign in for faster checkout,<br />
+                                    order tracking &amp; exclusive drops.
+                                </p>
+                                <div className="cart-auth-btns">
+                                    <Link to="/login" className="cart-auth-login">Log In</Link>
+                                    <Link to="/signup" className="cart-auth-signup">
+                                        <span>Create Account</span>
+                                    </Link>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Trust */}
                         <div className="cart-trust">
                             <div className="cart-trust-item"><span>🔒</span> Secure checkout</div>
                             <div className="cart-trust-item"><span>↩</span> Free returns</div>

@@ -7,6 +7,9 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import VerifyEmail from "./pages/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Wishlist from "./pages/Wishlist";
 import Orders from "./pages/Orders";
 import Profile from "./pages/Profile";
@@ -21,9 +24,7 @@ import TubeCursor from "./components/Effects/TubeCursor";
 function App() {
     return (
         <>
-            {/* Tube cursor runs globally on all pages */}
             <TubeCursor />
-
             <Routes>
                 {/* Public */}
                 <Route path="/" element={<Home />} />
@@ -37,6 +38,9 @@ function App() {
                 {/* Auth */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+                <Route path="/verify-email/:token" element={<VerifyEmail />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password/:token" element={<ResetPassword />} />
 
                 {/* User */}
                 <Route path="/wishlist" element={<Wishlist />} />
