@@ -31,12 +31,12 @@ router.post("/register", authLimiter, async (req, res, next) => {
         const token = user.getEmailVerificationToken();
         await user.save({ validateBeforeSave: false });
 
-        // Send verification email
+        // Send verification email — fail loudly so dev knows it's broken
         try {
             await sendVerificationEmail(user, token);
         } catch (emailErr) {
-            console.error("Email send error:", emailErr);
-            // Don't fail registration if email fails — but log it
+            console.error("Verification email failed to send:", emailErr.message);
+            // Clean up token so user can request a new one
             user.emailVerificationToken = undefined;
             user.emailVerificationExpire = undefined;
             await user.save({ validateBeforeSave: false });
@@ -84,11 +84,11 @@ router.get("/verify-email/:token", async (req, res, next) => {
         user.emailVerificationExpire = undefined;
         await user.save({ validateBeforeSave: false });
 
-        // Send welcome email
+        // Send welcome email (non-fatal)
         try {
             await sendWelcomeEmail(user);
         } catch (e) {
-            console.error("Welcome email error:", e);
+            console.error("Welcome email error:", e.message);
         }
 
         res.json({
@@ -146,6 +146,15 @@ router.post("/login", authLimiter, async (req, res, next) => {
             return res.status(401).json({ success: false, message: "Invalid email or password" });
         }
 
+        // ✅ Block login if email not verified (skip for admin accounts)
+        if (!user.isVerified && user.role !== "admin") {
+            return res.status(403).json({
+                success: false,
+                message: "Please verify your email before logging in. Check your inbox or request a new verification link.",
+                needsVerification: true,
+            });
+        }
+
         res.json({
             success: true,
             token: generateToken(user._id),
@@ -172,7 +181,6 @@ router.post("/forgot-password", authLimiter, async (req, res, next) => {
     try {
         const user = await User.findOne({ email: req.body.email });
         if (!user) {
-            // Don't reveal if email exists
             return res.json({
                 success: true,
                 message: "If that email is registered, a reset link has been sent.",

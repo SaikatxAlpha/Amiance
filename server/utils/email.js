@@ -1,14 +1,7 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    service: process.env.EMAIL_SERVICE || "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-};
+const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM = process.env.EMAIL_FROM || "AMIANCE <onboarding@resend.dev>";
 
 const brandHeader = `
   <div style="background:#0a0f0a;padding:32px 40px 20px;border-bottom:1px solid rgba(167,201,87,0.15)">
@@ -31,11 +24,10 @@ const brandFooter = `
   </div>`;
 
 exports.sendVerificationEmail = async (user, token) => {
-  const transporter = createTransporter();
   const verifyURL = `${process.env.CLIENT_URL}/verify-email/${token}`;
 
-  await transporter.sendMail({
-    from: `"AMIANCE" <${process.env.EMAIL_USER}>`,
+  const { error } = await resend.emails.send({
+    from: FROM,
     to: user.email,
     subject: "Verify your AMIANCE account — One step left",
     html: `
@@ -63,14 +55,18 @@ exports.sendVerificationEmail = async (user, token) => {
         ${brandFooter}
       </div>`,
   });
+
+  if (error) {
+    console.error("Resend verification email error:", error);
+    throw new Error(error.message);
+  }
 };
 
 exports.sendPasswordResetEmail = async (user, token) => {
-  const transporter = createTransporter();
   const resetURL = `${process.env.CLIENT_URL}/reset-password/${token}`;
 
-  await transporter.sendMail({
-    from: `"AMIANCE" <${process.env.EMAIL_USER}>`,
+  const { error } = await resend.emails.send({
+    from: FROM,
     to: user.email,
     subject: "Reset your AMIANCE password",
     html: `
@@ -97,10 +93,14 @@ exports.sendPasswordResetEmail = async (user, token) => {
         ${brandFooter}
       </div>`,
   });
+
+  if (error) {
+    console.error("Resend reset email error:", error);
+    throw new Error(error.message);
+  }
 };
 
 exports.sendOrderConfirmationEmail = async (user, order) => {
-  const transporter = createTransporter();
   const itemsHTML = order.items
     .map(
       (item) => `
@@ -120,8 +120,8 @@ exports.sendOrderConfirmationEmail = async (user, order) => {
     )
     .join("");
 
-  await transporter.sendMail({
-    from: `"AMIANCE" <${process.env.EMAIL_USER}>`,
+  const { error } = await resend.emails.send({
+    from: FROM,
     to: user.email,
     subject: `Order Confirmed — #AMI-${order._id.toString().slice(-6).toUpperCase()}`,
     html: `
@@ -150,30 +150,20 @@ exports.sendOrderConfirmationEmail = async (user, order) => {
                 ₹${order.totalPrice.toLocaleString("en-IN")}
               </span>
             </div>
-            <p style="margin:16px 0 0;color:rgba(242,232,207,0.3);font-size:11px">
-              Payment: ${order.paymentMethod === "cod" ? "Cash on Delivery" : "Card Payment"}
-            </p>
-          </div>
-          <div style="margin-top:32px;padding:20px 24px;
-            background:rgba(167,201,87,0.05);border:1px solid rgba(167,201,87,0.1)">
-            <p style="color:rgba(167,201,87,0.7);font-size:9px;letter-spacing:0.2em;
-              text-transform:uppercase;margin:0 0 8px">Shipping To</p>
-            <p style="color:rgba(242,232,207,0.5);font-size:13px;line-height:1.7;margin:0">
-              ${order.shippingAddress.name}<br>
-              ${order.shippingAddress.address}<br>
-              ${order.shippingAddress.city}, ${order.shippingAddress.postcode}
-            </p>
           </div>
         </div>
         ${brandFooter}
       </div>`,
   });
+
+  if (error) {
+    console.error("Resend order email error:", error);
+  }
 };
 
 exports.sendWelcomeEmail = async (user) => {
-  const transporter = createTransporter();
-  await transporter.sendMail({
-    from: `"AMIANCE" <${process.env.EMAIL_USER}>`,
+  const { error } = await resend.emails.send({
+    from: FROM,
     to: user.email,
     subject: "Welcome to AMIANCE — Your account is verified",
     html: `
@@ -184,7 +174,7 @@ exports.sendWelcomeEmail = async (user) => {
           <h2 style="font-family:'Arial Black',sans-serif;font-size:40px;color:#f2e8cf;
             margin:0 0 20px;line-height:1.1">You're in.</h2>
           <p style="color:rgba(242,232,207,0.45);font-size:14px;line-height:1.9;
-            margin:0 0 32px;font-weight:300;max-width:400px;margin:0 auto 32px">
+            margin:0 auto 32px;font-weight:300;max-width:400px">
             Welcome to the movement, ${user.name.split(" ")[0]}. Your account is now verified.
             Explore the latest SS26 drop before it's gone.
           </p>
@@ -197,4 +187,8 @@ exports.sendWelcomeEmail = async (user) => {
         ${brandFooter}
       </div>`,
   });
+
+  if (error) {
+    console.error("Resend welcome email error:", error);
+  }
 };
