@@ -1,58 +1,236 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { cartAPI } from "../services/api";
+import { useAuth } from "./AuthContext";
 
 const CartContext = createContext();
-
 export const useCart = () => useContext(CartContext);
+
+const GUEST_CART_KEY = "amiance_guest_cart";
+
+/* ── Normalize a server cart item into a flat UI-friendly shape ── */
+function normalizeServerItem(item) {
+    const productId =
+        item.product?._id || item.product || item._id;
+    return {
+        cartItemId: item._id,          // server's cart-item _id (for PUT / DELETE)
+        id: productId,
+        _id: productId,
+        name: item.name,
+        image: item.image,
+        price: item.price,
+        qty: item.qty,
+        size: item.size || "M",
+        tag: item.tag || null,
+    };
+}
+
+/* ── Normalize a guest (local) item so UI code is the same ── */
+function normalizeGuestItem(product) {
+    const productId = product._id || product.id;
+    return {
+        cartItemId: null,
+        id: productId,
+        _id: productId,
+        name: product.name,
+        image: product.image,
+        price: product.price,
+        qty: product.qty ?? 1,
+        size: product.size || "M",
+        tag: product.tag || null,
+    };
+}
 
 function CartProvider({ children }) {
     const [cart, setCart] = useState([]);
+    const [cartLoading, setCartLoading] = useState(false);
+    const { user } = useAuth();
+    const lastUserIdRef = useRef(null);
 
-    const addToCart = useCallback((product) => {
-        setCart((prev) => {
-            const existing = prev.find((item) =>
-                (item.id || item._id) === (product.id || product._id) &&
-                item.size === product.size
-            );
-            if (existing) {
-                return prev.map((item) =>
-                    (item.id || item._id) === (product.id || product._id) &&
-                        item.size === product.size
-                        ? { ...item, qty: item.qty + 1 }
-                        : item
+    /* ── On user change: load correct cart ─────────────────── */
+    useEffect(() => {
+        const prevId = lastUserIdRef.current;
+        const currId = user?._id ?? null;
+        lastUserIdRef.current = currId;
+
+        if (currId) {
+            // User just logged in — merge guest cart then fetch server cart
+            const guestRaw = localStorage.getItem(GUEST_CART_KEY);
+            const guestItems = guestRaw ? JSON.parse(guestRaw) : [];
+            fetchServerCart(guestItems);
+            localStorage.removeItem(GUEST_CART_KEY);
+        } else if (prevId && !currId) {
+            // User logged out — load guest cart
+            const guestRaw = localStorage.getItem(GUEST_CART_KEY);
+            setCart(guestRaw ? JSON.parse(guestRaw) : []);
+        } else if (!currId) {
+            // App load without a user
+            const guestRaw = localStorage.getItem(GUEST_CART_KEY);
+            setCart(guestRaw ? JSON.parse(guestRaw) : []);
+        }
+    }, [user?._id]); // eslint-disable-line
+
+    /* ── Persist guest cart whenever cart changes ───────────── */
+    useEffect(() => {
+        if (!user) {
+            localStorage.setItem(GUEST_CART_KEY, JSON.stringify(cart));
+        }
+    }, [cart, user]);
+
+    /* ── Fetch server cart and optionally push guest items ──── */
+    const fetchServerCart = async (guestItems = []) => {
+        setCartLoading(true);
+        try {
+            const data = await cartAPI.get();
+            const serverItems = (data.cart?.items || []).map(normalizeServerItem);
+
+            // Push any guest items that aren't already on the server
+            if (guestItems.length > 0) {
+                const pushes = guestItems.map((g) =>
+                    cartAPI
+                        .add({
+                            productId: g._id || g.id,
+                            name: g.name,
+                            image: g.image,
+                            price: g.price,
+                            qty: g.qty,
+                            size: g.size || "M",
+                        })
+                        .catch(() => null)
+                );
+                await Promise.all(pushes);
+                // Re-fetch after merging
+                const merged = await cartAPI.get();
+                setCart((merged.cart?.items || []).map(normalizeServerItem));
+            } else {
+                setCart(serverItems);
+            }
+        } catch (err) {
+            console.error("Cart fetch error:", err);
+        } finally {
+            setCartLoading(false);
+        }
+    };
+
+    /* ── addToCart ──────────────────────────────────────────── */
+    const addToCart = useCallback(
+        async (product) => {
+            const productId = product._id || product.id;
+            const size = product.size || "M";
+
+            if (user) {
+                try {
+                    const data = await cartAPI.add({
+                        productId,
+                        name: product.name,
+                        image: product.image,
+                        price: product.price,
+                        qty: 1,
+                        size,
+                    });
+                    setCart((data.cart?.items || []).map(normalizeServerItem));
+                } catch (err) {
+                    console.error("Add to cart error:", err);
+                }
+            } else {
+                setCart((prev) => {
+                    const existing = prev.find(
+                        (i) => (i.id || i._id) === productId && i.size === size
+                    );
+                    if (existing) {
+                        return prev.map((i) =>
+                            (i.id || i._id) === productId && i.size === size
+                                ? { ...i, qty: i.qty + 1 }
+                                : i
+                        );
+                    }
+                    return [...prev, normalizeGuestItem({ ...product, qty: 1, size })];
+                });
+            }
+        },
+        [user]
+    );
+
+    /* ── removeFromCart ─────────────────────────────────────── */
+    const removeFromCart = useCallback(
+        async (productId) => {
+            if (user) {
+                const item = cart.find((i) => (i.id || i._id) === productId);
+                if (!item?.cartItemId) return;
+                try {
+                    const data = await cartAPI.remove(item.cartItemId);
+                    setCart((data.cart?.items || []).map(normalizeServerItem));
+                } catch (err) {
+                    console.error("Remove from cart error:", err);
+                }
+            } else {
+                setCart((prev) =>
+                    prev.filter((i) => (i.id || i._id) !== productId)
                 );
             }
-            return [...prev, { ...product, qty: 1 }];
-        });
-    }, []);
+        },
+        [user, cart]
+    );
 
-    const removeFromCart = useCallback((id) => {
-        setCart((prev) =>
-            prev.filter((item) => (item.id || item._id) !== id)
-        );
-    }, []);
+    /* ── updateQty ──────────────────────────────────────────── */
+    const updateQty = useCallback(
+        async (productId, delta) => {
+            if (user) {
+                const item = cart.find((i) => (i.id || i._id) === productId);
+                if (!item?.cartItemId) return;
+                const newQty = item.qty + delta;
+                if (newQty <= 0) {
+                    return removeFromCart(productId);
+                }
+                try {
+                    const data = await cartAPI.update(item.cartItemId, { qty: newQty });
+                    setCart((data.cart?.items || []).map(normalizeServerItem));
+                } catch (err) {
+                    console.error("Update qty error:", err);
+                }
+            } else {
+                setCart((prev) =>
+                    prev
+                        .map((i) =>
+                            (i.id || i._id) === productId
+                                ? { ...i, qty: i.qty + delta }
+                                : i
+                        )
+                        .filter((i) => i.qty > 0)
+                );
+            }
+        },
+        [user, cart, removeFromCart]
+    );
 
-    const updateQty = useCallback((id, delta) => {
-        setCart((prev) =>
-            prev
-                .map((item) =>
-                    (item.id || item._id) === id
-                        ? { ...item, qty: item.qty + delta }
-                        : item
-                )
-                .filter((item) => item.qty > 0)
-        );
-    }, []);
-
-    const clearCart = useCallback(() => {
+    /* ── clearCart ──────────────────────────────────────────── */
+    const clearCart = useCallback(async () => {
+        if (user) {
+            try {
+                await cartAPI.clear();
+            } catch (err) {
+                console.error("Clear cart error:", err);
+            }
+        } else {
+            localStorage.removeItem(GUEST_CART_KEY);
+        }
         setCart([]);
-    }, []);
+    }, [user]);
 
-    const cartCount = cart.reduce((acc, item) => acc + item.qty, 0);
-    const cartTotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
+    const cartCount = cart.reduce((acc, i) => acc + i.qty, 0);
+    const cartTotal = cart.reduce((acc, i) => acc + i.price * i.qty, 0);
 
     return (
         <CartContext.Provider
-            value={{ cart, addToCart, removeFromCart, updateQty, clearCart, cartCount, cartTotal }}
+            value={{
+                cart,
+                cartLoading,
+                addToCart,
+                removeFromCart,
+                updateQty,
+                clearCart,
+                cartCount,
+                cartTotal,
+            }}
         >
             {children}
         </CartContext.Provider>
