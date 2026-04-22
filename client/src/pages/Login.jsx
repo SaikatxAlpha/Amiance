@@ -8,6 +8,8 @@ function Login() {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [showResend, setShowResend] = useState(false);
+    const [resendLoading, setResendLoading] = useState(false);
+    const [resendMsg, setResendMsg] = useState("");
     const { login } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -17,31 +19,41 @@ function Login() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!email || !password) { setError("All fields required."); return; }
-        setError(""); setLoading(true); setShowResend(false);
+        setError(""); setLoading(true); setShowResend(false); setResendMsg("");
         try {
             const user = await login(email, password);
             if (user.role === "admin") navigate("/admin");
             else navigate(from, { replace: true });
         } catch (err) {
             setError(err.message || "Login failed");
-            if (err.message?.toLowerCase().includes("verif")) setShowResend(true);
+            // Show resend button if server says email not verified
+            if (
+                err.message?.toLowerCase().includes("verif") ||
+                err.needsVerification
+            ) {
+                setShowResend(true);
+            }
         } finally {
             setLoading(false);
         }
     };
 
-    const handleResendVerification = async () => {
+    const handleResend = async () => {
+        if (!email) { setError("Enter your email address above first."); return; }
+        setResendLoading(true); setResendMsg(""); setError("");
         try {
-            const res = await fetch("http://localhost:5000/api/auth/resend-verification", {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/auth/resend-verification`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email }),
             });
             const data = await res.json();
-            setError(data.message);
+            setResendMsg(data.message || "Verification email sent!");
             setShowResend(false);
         } catch {
-            setError("Could not resend verification email.");
+            setResendMsg("Failed to resend. Please try again.");
+        } finally {
+            setResendLoading(false);
         }
     };
 
@@ -125,17 +137,35 @@ function Login() {
                         {error && (
                             <div>
                                 <p className="auth-error">{error}</p>
-                                {showResend && email && (
+                                {showResend && (
                                     <button
                                         type="button"
-                                        className="auth-switch-link"
-                                        style={{ fontSize: "11px", marginTop: "8px", display: "block", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-                                        onClick={handleResendVerification}
+                                        onClick={handleResend}
+                                        disabled={resendLoading}
+                                        style={{
+                                            display: "block", marginTop: "10px", background: "rgba(167,201,87,0.1)",
+                                            border: "1px solid rgba(167,201,87,0.3)", padding: "10px 18px",
+                                            color: "var(--g3)", fontFamily: "'Space Grotesk',sans-serif",
+                                            fontSize: "11px", fontWeight: 700, letterSpacing: "0.14em",
+                                            textTransform: "uppercase", cursor: "pointer", width: "100%",
+                                            transition: "background .2s ease", opacity: resendLoading ? 0.6 : 1,
+                                        }}
                                     >
-                                        Resend verification email →
+                                        {resendLoading ? "Sending..." : "✉ Resend Verification Email"}
                                     </button>
                                 )}
                             </div>
+                        )}
+
+                        {resendMsg && (
+                            <p style={{
+                                fontFamily: "'Space Grotesk',sans-serif", fontSize: "11px",
+                                color: "var(--g3)", padding: "10px 16px",
+                                border: "1px solid rgba(167,201,87,0.2)", background: "rgba(167,201,87,0.05)",
+                                letterSpacing: "0.06em",
+                            }}>
+                                {resendMsg}
+                            </p>
                         )}
 
                         <button className="auth-submit" type="submit" disabled={loading}>
