@@ -7,12 +7,15 @@ export const useCart = () => useContext(CartContext);
 
 const GUEST_CART_KEY = "amiance_guest_cart";
 
+/* ── Validate MongoDB ObjectId ──────────────────────────────── */
+const isValidObjectId = (id) => typeof id === "string" && /^[a-fA-F0-9]{24}$/.test(id);
+
 /* ── Normalize a server cart item into a flat UI-friendly shape ── */
 function normalizeServerItem(item) {
     const productId =
         item.product?._id || item.product || item._id;
     return {
-        cartItemId: item._id,          // server's cart-item _id (for PUT / DELETE)
+        cartItemId: item._id,
         id: productId,
         _id: productId,
         name: item.name,
@@ -53,17 +56,14 @@ function CartProvider({ children }) {
         lastUserIdRef.current = currId;
 
         if (currId) {
-            // User just logged in — merge guest cart then fetch server cart
             const guestRaw = localStorage.getItem(GUEST_CART_KEY);
             const guestItems = guestRaw ? JSON.parse(guestRaw) : [];
             fetchServerCart(guestItems);
             localStorage.removeItem(GUEST_CART_KEY);
         } else if (prevId && !currId) {
-            // User logged out — load guest cart
             const guestRaw = localStorage.getItem(GUEST_CART_KEY);
             setCart(guestRaw ? JSON.parse(guestRaw) : []);
         } else if (!currId) {
-            // App load without a user
             const guestRaw = localStorage.getItem(GUEST_CART_KEY);
             setCart(guestRaw ? JSON.parse(guestRaw) : []);
         }
@@ -83,9 +83,14 @@ function CartProvider({ children }) {
             const data = await cartAPI.get();
             const serverItems = (data.cart?.items || []).map(normalizeServerItem);
 
-            // Push any guest items that aren't already on the server
-            if (guestItems.length > 0) {
-                const pushes = guestItems.map((g) =>
+            // Only push guest items that have valid MongoDB ObjectIds
+            // Static products (e.g. "static_1") are not in the DB and will cause CastError
+            const validGuestItems = guestItems.filter((g) =>
+                isValidObjectId(g._id || g.id)
+            );
+
+            if (validGuestItems.length > 0) {
+                const pushes = validGuestItems.map((g) =>
                     cartAPI
                         .add({
                             productId: g._id || g.id,
@@ -98,7 +103,6 @@ function CartProvider({ children }) {
                         .catch(() => null)
                 );
                 await Promise.all(pushes);
-                // Re-fetch after merging
                 const merged = await cartAPI.get();
                 setCart((merged.cart?.items || []).map(normalizeServerItem));
             } else {
@@ -117,7 +121,8 @@ function CartProvider({ children }) {
             const productId = product._id || product.id;
             const size = product.size || "M";
 
-            if (user) {
+            if (user && isValidObjectId(productId)) {
+                // Only sync to server if it's a real DB product
                 try {
                     const data = await cartAPI.add({
                         productId,
@@ -130,8 +135,23 @@ function CartProvider({ children }) {
                     setCart((data.cart?.items || []).map(normalizeServerItem));
                 } catch (err) {
                     console.error("Add to cart error:", err);
+                    // Fall back to local state update
+                    setCart((prev) => {
+                        const existing = prev.find(
+                            (i) => (i.id || i._id) === productId && i.size === size
+                        );
+                        if (existing) {
+                            return prev.map((i) =>
+                                (i.id || i._id) === productId && i.size === size
+                                    ? { ...i, qty: i.qty + 1 }
+                                    : i
+                            );
+                        }
+                        return [...prev, normalizeGuestItem({ ...product, qty: 1, size })];
+                    });
                 }
             } else {
+                // Guest cart or static product — store locally
                 setCart((prev) => {
                     const existing = prev.find(
                         (i) => (i.id || i._id) === productId && i.size === size
@@ -155,18 +175,20 @@ function CartProvider({ children }) {
         async (productId) => {
             if (user) {
                 const item = cart.find((i) => (i.id || i._id) === productId);
-                if (!item?.cartItemId) return;
-                try {
-                    const data = await cartAPI.remove(item.cartItemId);
-                    setCart((data.cart?.items || []).map(normalizeServerItem));
-                } catch (err) {
-                    console.error("Remove from cart error:", err);
+                if (item?.cartItemId) {
+                    try {
+                        const data = await cartAPI.remove(item.cartItemId);
+                        setCart((data.cart?.items || []).map(normalizeServerItem));
+                        return;
+                    } catch (err) {
+                        console.error("Remove from cart error:", err);
+                    }
                 }
-            } else {
-                setCart((prev) =>
-                    prev.filter((i) => (i.id || i._id) !== productId)
-                );
             }
+            // Fallback: remove locally
+            setCart((prev) =>
+                prev.filter((i) => (i.id || i._id) !== productId)
+            );
         },
         [user, cart]
     );
@@ -176,28 +198,29 @@ function CartProvider({ children }) {
         async (productId, delta) => {
             if (user) {
                 const item = cart.find((i) => (i.id || i._id) === productId);
-                if (!item?.cartItemId) return;
-                const newQty = item.qty + delta;
-                if (newQty <= 0) {
-                    return removeFromCart(productId);
+                const newQty = (item?.qty ?? 1) + delta;
+                if (newQty <= 0) return removeFromCart(productId);
+
+                if (item?.cartItemId) {
+                    try {
+                        const data = await cartAPI.update(item.cartItemId, { qty: newQty });
+                        setCart((data.cart?.items || []).map(normalizeServerItem));
+                        return;
+                    } catch (err) {
+                        console.error("Update qty error:", err);
+                    }
                 }
-                try {
-                    const data = await cartAPI.update(item.cartItemId, { qty: newQty });
-                    setCart((data.cart?.items || []).map(normalizeServerItem));
-                } catch (err) {
-                    console.error("Update qty error:", err);
-                }
-            } else {
-                setCart((prev) =>
-                    prev
-                        .map((i) =>
-                            (i.id || i._id) === productId
-                                ? { ...i, qty: i.qty + delta }
-                                : i
-                        )
-                        .filter((i) => i.qty > 0)
-                );
             }
+            // Fallback: update locally
+            setCart((prev) =>
+                prev
+                    .map((i) =>
+                        (i.id || i._id) === productId
+                            ? { ...i, qty: i.qty + delta }
+                            : i
+                    )
+                    .filter((i) => i.qty > 0)
+            );
         },
         [user, cart, removeFromCart]
     );
