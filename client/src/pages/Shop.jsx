@@ -52,7 +52,7 @@ export const products = [
 
 const FILTERS = ["All", "Tops", "Bottoms", "Outerwear", "Accessories"];
 
-function ShopProductCard({ product, index, featured }) {
+function ShopProductCard({ product, index }) {
     const { addToCart } = useCart();
     const [added, setAdded] = useState(false);
 
@@ -67,7 +67,7 @@ function ShopProductCard({ product, index, featured }) {
     const productId = product._id || product.id;
 
     return (
-        <div className={`shop-card ${featured ? "shop-card--featured" : ""}`} data-index={index}>
+        <div className="shop-card" data-index={index}>
             <Link to={`/product/${productId}`} className="shop-card__img-wrap">
                 <img src={product.image} alt={product.name} className="shop-card__img" loading="lazy" />
                 <div className="shop-card__overlay">
@@ -112,6 +112,7 @@ function Shop() {
     const [allProducts, setAllProducts] = useState(products);
     const [loading, setLoading] = useState(true);
     const gridRef = useRef(null);
+    const obsRef = useRef(null);
 
     // Try to load from API, fallback to static
     useEffect(() => {
@@ -136,20 +137,51 @@ function Shop() {
 
     const handleFilter = (f) => {
         if (f === activeFilter) return;
+        // Reset in-view immediately so cards animate fresh on next filter
+        document.querySelectorAll(".shop-card").forEach(el => el.classList.remove("in-view"));
         setAnimating(true);
-        setTimeout(() => { setActiveFilter(f); setAnimating(false); }, 250);
+        setTimeout(() => {
+            setActiveFilter(f);
+            setAnimating(false);
+        }, 250);
     };
 
+    // Re-run observer whenever filtered list changes or loading finishes
     useEffect(() => {
-        const obs = new IntersectionObserver(
-            (entries) => entries.forEach(e => {
-                if (e.isIntersecting) { e.target.classList.add("in-view"); obs.unobserve(e.target); }
-            }),
-            { threshold: 0.08 }
-        );
-        document.querySelectorAll(".shop-card, .shop-reveal").forEach(el => obs.observe(el));
-        return () => obs.disconnect();
-    }, [filtered]);
+        // Disconnect any existing observer first
+        if (obsRef.current) {
+            obsRef.current.disconnect();
+            obsRef.current = null;
+        }
+
+        // Small delay so React has finished painting the new DOM
+        const timer = setTimeout(() => {
+            const obs = new IntersectionObserver(
+                (entries) => entries.forEach(e => {
+                    if (e.isIntersecting) {
+                        e.target.classList.add("in-view");
+                        obs.unobserve(e.target);
+                    }
+                }),
+                { threshold: 0.08 }
+            );
+            obsRef.current = obs;
+
+            document.querySelectorAll(".shop-card, .shop-reveal").forEach(el => {
+                // Remove stale class so transition fires fresh
+                el.classList.remove("in-view");
+                obs.observe(el);
+            });
+        }, 60);
+
+        return () => {
+            clearTimeout(timer);
+            if (obsRef.current) {
+                obsRef.current.disconnect();
+                obsRef.current = null;
+            }
+        };
+    }, [filtered, loading]);
 
     return (
         <>
@@ -222,7 +254,7 @@ function Shop() {
                         {filtered.length === 0 ? (
                             <div className="shop-empty">
                                 <span>No pieces in this category yet.</span>
-                                <button className="shop-filter-btn" onClick={() => setActiveFilter("All")}>View All</button>
+                                <button className="shop-filter-btn" onClick={() => handleFilter("All")}>View All</button>
                             </div>
                         ) : (
                             filtered.map((product, i) => (
@@ -230,7 +262,6 @@ function Shop() {
                                     key={product._id || product.id}
                                     product={product}
                                     index={i}
-                                    featured={i === 0 && activeFilter === "All"}
                                 />
                             ))
                         )}
