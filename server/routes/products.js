@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const Product = require("../models/Product");
 const { protect } = require("../middleware/auth");
 const { admin } = require("../middleware/admin");
@@ -21,6 +22,9 @@ router.get("/", async (req, res, next) => {
 // GET /api/products/:id
 router.get("/:id", async (req, res, next) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ success: false, message: "Product not found" });
+        }
         const product = await Product.findById(req.params.id);
         if (!product) return res.status(404).json({ success: false, message: "Product not found" });
         res.json({ success: true, product });
@@ -38,6 +42,9 @@ router.post("/", protect, admin, async (req, res, next) => {
 // PUT /api/products/:id — admin only
 router.put("/:id", protect, admin, async (req, res, next) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ success: false, message: "Product not found" });
+        }
         const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
             new: true, runValidators: true,
         });
@@ -49,6 +56,9 @@ router.put("/:id", protect, admin, async (req, res, next) => {
 // DELETE /api/products/:id — admin only
 router.delete("/:id", protect, admin, async (req, res, next) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ success: false, message: "Product not found" });
+        }
         const product = await Product.findByIdAndDelete(req.params.id);
         if (!product) return res.status(404).json({ success: false, message: "Product not found" });
         res.json({ success: true, message: "Product deleted" });
